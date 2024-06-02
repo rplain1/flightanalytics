@@ -10,6 +10,7 @@
 #'   \item \code{international}: Arrival curve data for international flights.
 #' }
 #'
+#' @source \href{https://iabsc.org/wp-content/uploads/2021/04/Planning-Guidelines-and-Design-Standards-for-Checked-Baggage-Inspection-Systems-V7.0.pdf}{Planning Guidelines and Design Standards for Checked Baggage Inspection Systems V7.0}
 #' @examples
 #' get_pgds_arrival_curve()
 #'
@@ -69,3 +70,63 @@ clean_arrival_curve <- function(arrival_curve) {
     dplyr::mutate(value = value / 100)
 
 }
+
+
+#' Get PGDS Passenger and Bag Factors
+#'
+#' This function creates a data frame containing passenger and baggage factors for various airlines.
+#' The data includes load factors, the percentage of parties checking bags pre-gate, and the average
+#' number of checked bags per passenger. The data is sourced from the Planning Guidelines and Design
+#' Standards for Checked Baggage Inspection Systems V7.0.
+#'
+#' @return A tibble containing the following columns:
+#' \describe{
+#'   \item{airline}{Name of the airline operator.}
+#'   \item{carrier}{Carrier code of the airline operator.}
+#'   \item{load_factor}{Load factor for the airline, representing the percentage of seats filled.}
+#'   \item{check_bag_factor}{Percentage of parties checking bags pre-gate.}
+#'   \item{avg_num_bags}{Average number of checked bags per passenger.}
+#' }
+#' @source \href{https://iabsc.org/wp-content/uploads/2021/04/Planning-Guidelines-and-Design-Standards-for-Checked-Baggage-Inspection-Systems-V7.0.pdf}{Planning Guidelines and Design Standards for Checked Baggage Inspection Systems V7.0}
+#' @importFrom tibble tibble
+#' @importFrom dplyr mutate across contains
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' get_pgds_passenger_bag_factors()
+#' }
+get_pgds_passenger_bag_factors <- function() {
+
+  # Define the data
+  operator_name <- c("Continental Airlines", "Alaska Airlines", "America West Airlines (domestic destinations)",
+                     "United Airlines", "XX Airlines", "SkyWest Airlines", "American Airlines",
+                     "JetBlue Airways", "Delta Air Lines", "America West Airlines (Mexican destinations)",
+                     "Aloha Airlines", "Horizon Air", "Mesa Airlines", "ATA Airlines",
+                     "United Express/SkyWest Airlines")
+  operator_code <- c("CO", "AS", "HP", "UA", "XX", "OO", "AA", "B6", "DL", "HP", "AQ", "QX", "YV", "TZ", "A296")
+  load_factor <- c(96, 98, 83, 85, 77, 91, 98, 90, 89, 83, 85, 60, 85, 85, 91)
+
+  percent_of_parties_checking_pre_gate <- c(75, 80, 84, 45, 34, 79, 90, 90, 92, 100, 97, 77, 51, 64, 66)
+  average_number_of_checked_bags_per_passenger <- c(0.79, 0.71, 0.68, 0.87, 0.92, 0.91, 0.71, 0.90, 0.98, 1.30, 1.30, 0.95, 0.96, 1.23, 0.87)
+
+  # Create the data frame
+  operator_data <- tibble::tibble(
+    airline = operator_name,
+    carrier = operator_code,
+    load_factor = load_factor,
+    check_bag_factor = percent_of_parties_checking_pre_gate,
+    avg_num_bags = average_number_of_checked_bags_per_passenger
+  ) %>%
+    dplyr::mutate(dplyr::across(dplyr::contains('factor'), \(x) x/100))
+
+  operator_data
+
+}
+
+
+
+
+
+
+

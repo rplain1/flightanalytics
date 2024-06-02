@@ -3,6 +3,9 @@
 \name{get_pgds_arrival_curve}
 \alias{get_pgds_arrival_curve}
 \title{Get Passenger and Baggage Arrival Curve Data}
+\source{
+\href{https://iabsc.org/wp-content/uploads/2021/04/Planning-Guidelines-and-Design-Standards-for-Checked-Baggage-Inspection-Systems-V7.0.pdf}{Planning Guidelines and Design Standards for Checked Baggage Inspection Systems V7.0}
+}
 \usage{
 get_pgds_arrival_curve()
 }
