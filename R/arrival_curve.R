@@ -29,4 +29,43 @@ get_pgds_arrival_curve <- function() {
   )
 }
 
+#' Clean Arrival Curve Data
+#'
+#' This function cleans the arrival curve data by extracting numeric values from the 'minutes_prior' column,
+#' grouping the data by minute intervals, summarizing the values, and scaling them to a percentage format.
+#'
+#' @param arrival_curve A data frame containing arrival curve data with a 'minutes_prior' column.
+#' @return A cleaned data frame with the following columns:
+#'   \itemize{
+#'     \item \code{minutes_prior}: Minutes prior to arrival time.
+#'     \item Other columns representing aggregated and scaled values.
+#'   }
+#'
+#' @details
+#' This function extracts numeric values from the 'minutes_prior' column using regular expressions,
+#' groups the data by minute intervals, sums the values within each interval, and scales the summed values
+#' to a percentage format by dividing them by 100.
+#'
+#' @examples
+#' arrival_curve <- data.frame(minutes_prior = c("10", "20", "30"),
+#'                             value1 = c(5, 10, 15),
+#'                             value2 = c(20, 30, 40))
+#' clean_arrival_curve(arrival_curve)
+#'
+#' @export
+clean_arrival_curve <- function(arrival_curve) {
 
+  if (!("minutes_prior" %in% colnames(arrival_curve))) {
+    stop("Error: 'minutes_prior' column not found in the input data frame.")
+  }
+
+  arrival_curve |>
+    dplyr::mutate(minutes_prior = stringr::str_extract(minutes_prior, '\\d+') |> as.numeric()) |>
+    dplyr::group_by(minutes_prior) |>
+    dplyr::summarise(
+      dplyr::across(dplyr::everything(), sum)
+    ) |>
+    tidyr::pivot_longer(cols = -minutes_prior, values_to = 'value') |>
+    dplyr::mutate(value = value / 100)
+
+}
