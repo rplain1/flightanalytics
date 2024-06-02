@@ -6,7 +6,8 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of flightanalytics is to …
+The goal of {flightanalytics} is to provide a set of functions and
+datasets to facilitate analyzing publich flight data.
 
 ## Installation
 
@@ -20,19 +21,23 @@ You can install the development version of flightanalytics from
 
 ``` r
 library(flightanalytics)
-get_pgds_arrival_curve()
-#> # A tibble: 25 × 4
-#>    minutes_prior peak_domestic_8am off_peak_domestic international
-#>    <chr>                     <dbl>             <dbl>         <dbl>
-#>  1 10                         0.8               0.06          0.22
-#>  2 20                         0.26              0.3           0.11
-#>  3 30                         0.42              0.48          0.15
-#>  4 40                         1.1               0.98          0.28
-#>  5 50                         3.08              2.1           0.61
-#>  6 60                         6.71              4.03          1.32
-#>  7 70                        10.3               6.19          3.08
-#>  8 80                        12.9               8.16          5.13
-#>  9 90                        13.5               9.59          7.37
-#> 10 100                       12.8              10.2           8.93
-#> # ℹ 15 more rows
+library(ggplot2)
+get_pgds_arrival_curve() |> 
+  clean_arrival_curve() |> 
+  ggplot(aes(minutes_prior, value, color = name)) +
+  geom_point() +
+  geom_line(linewidth = 2) +
+  labs(
+    title = 'Arrival Curve',
+    subtitle = 'The distribution of minutes prior to departure that a passenger will arrive',
+    x = 'Minutes Prior',
+    y = NULL,
+    color = NULL,
+    fill = NULL,
+  ) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_x_reverse() +
+  theme(legend.position = 'top') 
 ```
+
+<img src="man/figures/README-example-1.png" width="100%" />
