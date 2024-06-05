@@ -12,6 +12,9 @@ LazyData: true
 RoxygenNote: 7.2.3
 Imports: 
     dplyr,
+    ks,
+    nycflights13,
+    purrr,
     rlang,
     stringr,
     tibble,
