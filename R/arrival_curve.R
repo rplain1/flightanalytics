@@ -54,6 +54,7 @@ get_pgds_arrival_curve <- function() {
 #' clean_arrival_curve(arrival_curve)
 #'
 #' @export
+#' @importFrom rlang .data
 clean_arrival_curve <- function(arrival_curve) {
 
   if (!("minutes_prior" %in% colnames(arrival_curve))) {
@@ -61,14 +62,44 @@ clean_arrival_curve <- function(arrival_curve) {
   }
 
   arrival_curve |>
-    dplyr::mutate(minutes_prior = stringr::str_extract(minutes_prior, '\\d+') |> as.numeric()) |>
-    dplyr::group_by(minutes_prior) |>
+    dplyr::mutate(minutes_prior = stringr::str_extract(.data$minutes_prior, '\\d+') |> as.numeric()) |>
+    dplyr::group_by(.data$minutes_prior) |>
     dplyr::summarise(
       dplyr::across(dplyr::everything(), sum)
     ) |>
-    tidyr::pivot_longer(cols = -minutes_prior, values_to = 'value') |>
-    dplyr::mutate(value = value / 100)
+    tidyr::pivot_longer(cols = -.data$minutes_prior, values_to = 'value') |>
+    dplyr::mutate(value = .data$value / 100)
 
+}
+
+#' Create KDE Samples from Arrival Curve
+#'
+#' This function takes the output from clean_arrival_curve(get_pgds_arrival_curve()) and creates a KDE sample to join to the flight schedule.
+#'
+#' @param arrival_curve_output A data frame resulting from clean_arrival_curve(get_pgds_arrival_curve()).
+#' @return A data frame with KDE samples and additional metadata columns.
+#' @export
+#' @importFrom rlang .data
+create_arrival_curve_kde <- function(arrival_curve_output) {
+
+  arrival_curve_kde <- arrival_curve_output |>
+    dplyr::group_by(.data$name) |>
+    tidyr::nest() |>
+    dplyr::ungroup() |>
+    # Sample 1000 values from 10-minute increments
+    dplyr::mutate(
+      samples = purrr::map(.x = .data$data, ~sample(.x$minutes_prior, 1000, replace = TRUE, prob = .x$value))
+    ) |>
+    # Apply KDE function
+    dplyr::mutate(
+      .kde = purrr::map(.x = .data$samples, ~ks::kde(.x))
+    ) |>
+    dplyr::mutate(
+      peak = .data$name == 'peak_domestic_8am',
+      domestic = !stringr::str_detect(.data$name, 'international')
+    )
+
+  return(arrival_curve_kde)
 }
 
 
@@ -117,12 +148,74 @@ get_pgds_passenger_bag_factors <- function() {
     load_factor = load_factor,
     check_bag_factor = percent_of_parties_checking_pre_gate,
     avg_num_bags = average_number_of_checked_bags_per_passenger
-  ) %>%
+  ) |>
     dplyr::mutate(dplyr::across(dplyr::contains('factor'), \(x) x/100))
 
   operator_data
 
 }
+
+#' Clean and join nycflights13 datasets
+#'
+#' This function joins flights, planes, and airports data from the nycflights13 package.
+#' It can also accept data frames as arguments for more flexibility.
+#'
+#' @param flights A data frame containing flight data. If NULL, the function uses `nycflights13::flights`.
+#' @param planes A data frame containing planes data. If NULL, the function uses `nycflights13::planes`.
+#' @param airports A data frame containing airports data. If NULL, the function uses `nycflights13::airports`.
+#' @return A data frame with joined flights, planes, and airports data, including columns indicating if the airport is domestic US and flight type.
+#' @export
+#' @importFrom rlang .data
+clean_and_join_nycflights <- function(flights = NULL, planes = NULL, airports = NULL) {
+
+  # Ensure necessary packages are loaded
+  if (!requireNamespace("nycflights13", quietly = TRUE)) {
+    stop("The package 'nycflights13' is required but not installed.")
+  }
+  if (!requireNamespace("dplyr", quietly = TRUE)) {
+    stop("The package 'dplyr' is required but not installed.")
+  }
+
+  # Load default datasets from nycflights13 package if not provided
+  if (is.null(flights)) {
+    flights <- nycflights13::flights
+  }
+  if (is.null(planes)) {
+    planes <- nycflights13::planes
+  }
+  if (is.null(airports)) {
+    airports <- nycflights13::airports
+  }
+
+  # Define latitude and longitude ranges for the contiguous United States
+  lat_min <- 24.396308
+  lat_max <- 49.384358
+  lon_min <- -125.0
+  lon_max <- -66.93457
+
+  # Add column to indicate if airport is in the domestic United States
+  airports <- airports |>
+    dplyr::mutate(is_domestic_us = (.data$lat >= lat_min & .data$lat <= lat_max & .data$lon >= lon_min & .data$lon <= lon_max))
+
+  # Join the datasets
+  flights |>
+    dplyr::left_join(planes, by = "tailnum") |>
+    dplyr::left_join(airports, by = c("origin" = "faa"), suffix = c("", "_origin")) |>
+    dplyr::left_join(airports, by = c("dest" = "faa"), suffix = c("", "_dest")) |>
+    dplyr::mutate(flight_type = dplyr::case_when(
+      .data$is_domestic_us_dest == FALSE ~ 'international',
+      .data$sched_dep_time <= 800 ~ 'peak_domestic_8am',
+      TRUE ~ 'off_peak_domestic'
+    )) |>
+    dplyr::group_by(.data$carrier) |>
+    dplyr::mutate(seats = dplyr::if_else(is.na(.data$seats), stats::median(.data$seats, na.rm = TRUE), .data$seats)) |>
+    dplyr::ungroup()
+
+
+}
+
+
+
 
 
 
