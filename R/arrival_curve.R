@@ -199,7 +199,7 @@ clean_and_join_nycflights <- function(flights = NULL, planes = NULL, airports = 
 
   # Join the datasets
   flights |>
-    dplyr::mutate(dep_dttm = .data$time_hour + lubridate::minutes(.data$minute))
+    dplyr::mutate(dep_dttm = .data$time_hour + lubridate::minutes(.data$minute)) |>
     dplyr::left_join(planes |> dplyr::select(.data$tailnum, .data$seats), by = "tailnum") |>
     dplyr::left_join(airports, by = c("origin" = "faa"), suffix = c("", "_origin")) |>
     dplyr::left_join(airports, by = c("dest" = "faa"), suffix = c("", "_dest")) |>
